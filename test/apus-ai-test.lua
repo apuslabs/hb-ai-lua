@@ -13,7 +13,7 @@ local function ApusAI(json)
         print("\27[34m" .. text .. "\27[0m")
     end
     
-    self.ROUTER_PROCESS = "QwaPu_yGGKtzfRQ9EDdkPulLrCGOIpbIqc40PvFq6YU"
+    self.ROUTER_PROCESS = "9I9F1IHS94oUABzKclMW8f2oj7_6_X9zGA_fnMZ_AzY"
     
     self._handlers_initialized = false
     self._callbacks = {}
@@ -29,11 +29,12 @@ local function ApusAI(json)
             end
         )
         
+        
         Handlers.add(
-            "apus-ai-info-response",
-            Handlers.utils.hasMatchingTag("Action", "Info-Response"),
+            "apus-ai-balance-response",
+            Handlers.utils.hasMatchingTag("Action", "Balance-Response"),
             function(msg)
-                self._handleInfoResponse(msg)
+                self._handleBalanceResponse(msg)
             end
         )
         
@@ -55,51 +56,66 @@ local function ApusAI(json)
         
         -- Handle optional parameters
         options = options or {}
-        callback = callback or function(err, res)
-            if err then
-                DebugPrint("Error: " .. err.message)
-            else
-                DebugPrint("AI Response in callback: " .. res.data)
-            end
-        end
         
         -- Generate unique reference
         local reference = options.reference or self.generateReference()
-        
+        local complete_reference = ao.id .. "-" .. reference
         if callback then
-            self._callbacks[reference] = callback
+            self._callbacks[complete_reference] = callback
+            DebugPrint("DEBUG: Callback stored for: " .. complete_reference)
+        else
+            DebugPrint("DEBUG: No callback provided")
         end
 
-        -- Encode options to JSON
-        local options_json = ""
-        if next(options) then
-            options_json = json.encode(options)
-            DebugPrint("DEBUG: JSON options being sent: " .. options_json)
+        local tags = {
+            ["Action"] = "Infer",
+            ["X-Prompt"] = prompt,
+            ["X-Reference"] = reference,
+        }
+        
+        -- Add session if provided
+        if options.session then
+            tags["X-Session"] = options.session
         end
-
+        
+        -- Only add X-Options if there are actual options (excluding session and reference)
+        local hasOptions = false
+        for key, value in pairs(options) do
+            if key ~= "session" and key ~= "reference" then
+                hasOptions = true
+                break
+            end
+        end
+        
+        if hasOptions then
+            tags["X-Options"] = json.encode(options)
+        end
+        DebugPrint("DEBUG: Tags: " .. json.encode(tags))
         ao.send({
             Target = self.ROUTER_PROCESS,
-            Action = "Infer",
-            ["X-Prompt"] = prompt,
-            ["X-Session"] = options.session or "",
-            ["X-Reference"] = reference,
-            ["X-Options"] = options_json
+            Tags = tags
         })
         
-        DebugPrint("AI inference request sent - Reference: " .. reference)
+        DebugPrint("DEBUG : AI inference request sent - Reference: " .. reference)
         return reference
     end
     
-    function self.getInfo(callback)
+
+    
+    function self.getBalance(callback)
         -- Ensure handlers are initialized
         self.initialize()
-        assert(type(callback) == "function", "Callback function is required")
         
-        self._info_callback = callback
+        -- Callback is optional - if not provided, result will be printed
+        if callback then
+            assert(type(callback) == "function", "Callback must be a function")
+        end
+        
+        self._balance_callback = callback
         
         ao.send({
             Target = self.ROUTER_PROCESS,
-            Action = "Info"
+            Action = "Balance"
         })
     end
     
@@ -129,39 +145,59 @@ local function ApusAI(json)
     function self._handleInferenceResponse(msg)
         local session = msg.Tags["X-Session"] or ""
         local reference = msg.Tags["X-Reference"] or ""
+        DebugPrint("DEBUG: Response received with reference: " .. reference)
+        
+        -- Decode JSON from msg.Data
+        local decoded_data = {}
+        if msg.Data and msg.Data ~= "" then
+            local success, result = pcall(json.decode, msg.Data)
+            if success then
+                decoded_data = result
+            else
+                DebugPrint("DEBUG : JSON decode FAILED: " .. tostring(result))
+            end
+        end
+        
+        -- Extract attestation (it's a complex nested structure)
+        local attestation = ""
+        if decoded_data.attestation and type(decoded_data.attestation) == "table" then
+            -- The attestation is nested, try to extract the JWT token
+            if decoded_data.attestation[1] and decoded_data.attestation[1][2] then
+                attestation = decoded_data.attestation[1][2]
+            end
+        end
         
         local response = {
-            data = msg.Data or "",
+            data = decoded_data.result or msg.Data or "",  -- Note: "result" not "results"
             session = session,
-            attestation = msg.Tags["X-Attestation"] or "",
+            attestation = attestation,
             reference = reference
         }
-        
+
         if reference and self._callbacks[reference] then
             local callback = self._callbacks[reference]
             self._callbacks[reference] = nil
             callback(nil, response)
         else
-            DebugPrint("AI Response From SDK: " .. response.data)
+            DebugPrint("DEBUG : AI Response From SDK: " .. response.data)
         end
     end
     
-
     
-    function self._handleInfoResponse(msg)
-        local info = {
-            price = tonumber(msg.Tags["price"]) or 0,
-            worker_count = tonumber(msg.Tags["worker_count"]) or 0,
-            pending_tasks = tonumber(msg.Tags["pending_tasks"]) or 0
+    function self._handleBalanceResponse(msg)
+        local balance = {
+            balance = msg.Tags["Balance"] or msg.Data or "0",
+            account = msg.Tags["Account"] or "",
+            data = msg.Data or "0"
         }
         
         -- Call callback if exists
-        if self._info_callback then
-            local callback = self._info_callback
-            self._info_callback = nil
-            callback(nil, info)
+        if self._balance_callback then
+            local callback = self._balance_callback
+            self._balance_callback = nil
+            callback(nil, balance)
         else
-            DebugPrint("Service Info - Price: " .. info.price .. ", Workers: " .. info.worker_count .. ", Pending: " .. info.pending_tasks)
+            DebugPrint("DEBUG : Balance Info - Account: " .. balance.account .. ", Balance: " .. balance.balance)
         end
     end
     

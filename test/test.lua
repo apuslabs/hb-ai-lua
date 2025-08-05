@@ -8,31 +8,30 @@ local ApusAI = require('apus-ai-test')(json)
 -- Test 1: Simple inference (matches README exactly)
 function Test1_simple_inference()
     print("=== Test 1: Simple Inference ===")
-    print("Prompt: 'What is Arweave?'")
+    print("Prompt: 'How are you?'")
     print("---")
-    ApusAI.infer("What is Arweave?")
+    ApusAI.infer("How are you?")
     print("Waiting for response...")
 end
 
 -- Test 2: Inference with options and callback
 function Test2_advanced_inference()
     print("=== Test 2: Advanced Inference ===")
+    print("Prompt: 'Translate the following to French: 'The future is decentralized.'")
     local prompt = "Translate the following to French: 'The future is decentralized.'"
     local options = {
-        temp = 0.5,
+        temperature = 0.8,
     }
-
     local taskRef = ApusAI.infer(prompt, options, function(err, res)
         if err then
             print("Error: " .. err.message)
             return
         end
-        print("Response: " .. res)
-        print("Translation received: " .. res.data)
+        print("Attestation: " .. res.attestation)
+        print("Reference: " .. res.reference)
         print("Session ID for follow-up: " .. res.session)
+        print("Translation received: " .. res.data)
     end)
-
-    print("Inference task submitted. Task Reference: " .. taskRef)
 end
 
 -- Test 3: Just prompt with callback
@@ -47,19 +46,29 @@ function Test3_prompt_with_callback()
     end)
 end
 
--- Test 4: Get service info
-function Test4_get_info()
-    print("=== Test 4: Get Service Info ===")
-    ApusAI.getInfo(function(err, info)
+
+-- Test 4.5: Get balance info with callback
+function Test4_get_balance()
+    print("=== Test 4: Get Balance ===")
+    ApusAI.getBalance(function(err, balance)
         if err then
-            print("Failed to get info: " .. err.message)
+            print("❌ Failed to get balance: " .. err.message)
             return
         end
         
-        print("Price: " .. info.price .. " Armstrongs")
-        print("Workers: " .. info.worker_count)
-        print("Pending: " .. info.pending_tasks)
+        print("✅ Balance retrieved successfully:")
+        print("  Account: " .. balance.account)
+        print("  Balance: " .. balance.balance .. " Credits")
+        print("  Data: " .. balance.data)
     end)
+end
+
+-- Test 5: Get balance info without callback (auto-print)
+function Test5_get_balance_no_callback()
+    print("=== Test 5: Get Balance without Callback ===")
+    print("Should automatically print balance to console...")
+    ApusAI.getBalance()
+    print("Balance request sent (will auto-print response)")
 end
 
 -- Test 5: Test getTaskStatus function
@@ -78,40 +87,58 @@ function Test5_get_task_status()
     end)
 end
 
--- Test 6: Test setRouter function
-function Test6_set_router()
-    print("=== Test 6: Set Router ===")
-    local newRouter = "new-router-process-id"
-    
-    print("Original router: " .. ApusAI.ROUTER_PROCESS)
-    ApusAI.setRouter(newRouter)
-    print("New router: " .. ApusAI.ROUTER_PROCESS)
-    
-    -- Reset to original
-    ApusAI.setRouter("QwaPu_yGGKtzfRQ9EDdkPulLrCGOIpbIqc40PvFq6YU")
-    print("Reset router: " .. ApusAI.ROUTER_PROCESS)
-end
-
--- Test 7: Test session handling
+-- Test 7: Test session handling - Simple conversation
 function Test7_session_handling()
     print("=== Test 7: Session Handling ===")
-    local sessionId = "test-session-" .. tostring(os.time())
     
-    local taskRef = ApusAI.infer("What is the weather like?", {
-        session = sessionId,
-        max_tokens = 30
-    }, function(err, res)
+    -- Simple state for 2-question conversation
+    local state = {
+        session = nil,
+        currentQuestion = 1
+    }
+    
+    local questions = {
+        "What is the weather?",
+        "What was my last question?"
+    }
+    
+    -- Forward declare askQuestion
+    local askQuestion
+    
+    local function handleResponse(err, res)
         if err then
-            print("Error: " .. err.message)
+            print("❌ Session Error: " .. err.message)
             return
         end
         
-        print("Response: " .. res.data)
-        print("Session: " .. res.session)
-        print("Session matches: " .. tostring(res.session == sessionId))
-    end)
+        print("🤖 AI: " .. res.data)
+        print("📍 Session: " .. (res.session or "none"))
+        
+        -- Save session for next question
+        state.session = res.session
+        state.currentQuestion = state.currentQuestion + 1
+        
+        -- Ask next question if available
+        if state.currentQuestion <= #questions then
+            askQuestion()
+        else
+            print("✅ Session conversation completed!")
+        end
+    end
     
-    print("Session test submitted with reference: " .. taskRef)
+    askQuestion = function()
+        local question = questions[state.currentQuestion]
+        print("👤 You: " .. question)
+        
+        local options = {
+            session = state.session -- Pass current session (nil for first question)
+        }
+        
+        ApusAI.infer(question, options, handleResponse)
+    end
+    
+    -- Start the conversation
+    askQuestion()
 end
 
 -- Test 8: Test error handling for invalid inputs
@@ -144,23 +171,12 @@ function Test8_error_handling()
         print("❌ Should have caught nil prompt error")
     end
     
-    -- Test invalid callback for getInfo
-    success, err = pcall(function()
-        ApusAI.getInfo(nil)
-    end)
-    
-    if not success then
-        print("✅ Correctly caught invalid callback error: " .. err)
-    else
-        print("❌ Should have caught invalid callback error")
-    end
 end
 
 -- Test 9: Test custom reference
 function Test9_custom_reference()
     print("=== Test 9: Custom Reference ===")
     local customRef = "custom-ref-" .. tostring(os.time())
-    
     local taskRef = ApusAI.infer("Tell me a joke", {
         reference = customRef
     }, function(err, res)
@@ -170,49 +186,13 @@ function Test9_custom_reference()
         end
         
         print("Response: " .. res.data)
-        print("Custom reference: " .. res.reference)
-        print("Reference matches: " .. tostring(res.reference == customRef))
+        print("Custom final reference: " .. res.reference)
     end)
     
     print("Custom reference test submitted. Task Reference: " .. taskRef)
+    print("the final reference should be: " .. ao.id .. "-" .. customRef)
 end
 
--- Function to run all tests
-function Run_all()
-    print("🚀 Starting ApusAI SDK Tests")
-    print("=" .. string.rep("=", 50))
-    print()
-
-    Test1_simple_inference()
-    print()
-
-    Test2_advanced_inference()
-    print()
-
-    Test3_prompt_with_callback()
-    print()
-
-    Test4_get_info()
-    print()
-
-    Test5_get_task_status()
-    print()
-
-    Test6_set_router()
-    print()
-
-    Test7_session_handling()
-    print()
-
-    Test8_error_handling()
-    print()
-
-    Test9_custom_reference()
-    print()
-
-    print("=" .. string.rep("=", 50))
-    print("✅ All tests completed!")
-end
 
 
 

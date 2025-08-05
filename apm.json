@@ -1,9 +1,9 @@
 {
     "$schema": "https://raw.githubusercontent.com/ankushKun/apm-cli/main/apm.schema.json",
-    "name": "apus-ailib-Beta",
-    "vendor": "@apm",
-    "description": "test ai lib",
-    "main": "source.lua",
+    "name": "ai-lib-beta",
+    "vendor": "@apuslabs",
+    "description": "apus ai Beta SDK",
+    "main": "apus-ai.lua",
     "version": "1.0.0",
     "repository": "https://github.com/apuslabs/hb-ai-lua.git",
     "license": "MIT",
