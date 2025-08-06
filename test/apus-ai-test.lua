@@ -27,6 +27,26 @@ self._callbacks = {}
 function self.initialize()
         if self._handlers_initialized then return end
         
+        print("╔" .. string.rep("═", 58) .. "╗")
+        print("║" .. string.rep(" ", 18) .. "🚀 APUS AI SDK 🚀" .. string.rep(" ", 18) .. "║")
+        print("║" .. string.rep(" ", 16) .. "Welcome to the Future!" .. string.rep(" ", 16) .. "║")
+        print("╠" .. string.rep("═", 58) .. "╣")
+        print("║  ✅ ApusAI SDK Initialized successfully!             ║")
+        print("║                                                      ║")
+        print("║  🔧 How to create an instance:                       ║")
+        print("║      ApusAI = require('apus-ai-test')                ║")
+        print("║                                                      ║")
+        print("║  📋 Available Methods:                               ║")
+        print("║    🧠 ApusAI.infer() - AI inference & chat          ║")
+        print("║    💰 ApusAI.getBalance() - Check your credits      ║")
+        print("║    📊 ApusAI.getTaskStatus() - Monitor tasks        ║")
+        print("║                                                      ║")
+        print("║  💡 Pro Tip: Enable debug logs with:                ║")
+        print("║      ApusAI_Debug = true                             ║")
+        print("║                                                      ║")
+        print("║  🎯 Ready to build amazing AI applications!         ║")
+        print("╚" .. string.rep("═", 58) .. "╝")
+        
         Handlers.add(
             "apus-ai-inference-response",
             Handlers.utils.hasMatchingTag("Action", "Infer-Response"),
