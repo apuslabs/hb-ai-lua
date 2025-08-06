@@ -33,6 +33,8 @@ function self.initialize()
         print("╠" .. string.rep("═", 58) .. "╣")
         print("║  ✅ ApusAI SDK Initialized successfully!             ║")
         print("║                                                      ║")
+        print("║  🎁 NEW USER BONUS: 5 FREE inference credits!       ║")
+        print("║                                                      ║")
         print("║  🔧 How to create an instance:                       ║")
         print("║      ApusAI = require('apus-ai-test')                ║")
         print("║                                                      ║")
@@ -218,32 +220,37 @@ function self.initialize()
         DebugPrint("DEBUG: Response received with reference: " .. reference)
         
         -- Check if this is an error response
-        if msg.Tags["Code"] and msg.Tags["Code"] == "Error" then
+        if msg.Tags["Code"] then
             local error_message = msg.Tags["Message"] or "Unknown error"
             DebugPrint("DEBUG: Error response received - Code: " .. msg.Tags["Code"] .. ", Message: " .. error_message)
             
-            -- For error responses, server returns original reference, but we store callbacks with complete reference
-            local complete_reference = ao.id .. "-" .. reference
+            -- Only when the error code is "Error" we will use complete_reference, otherwise use reference
+            local reference_to_use
+            if msg.Tags["Code"] == "Error" then
+                reference_to_use = ao.id .. "-" .. reference
+            else
+                reference_to_use = reference
+            end
             
             -- Update task status to failed
-            if ApusAI_Tasks[complete_reference] then
-                ApusAI_Tasks[complete_reference].status = "failed"
-                ApusAI_Tasks[complete_reference].error_message = error_message
-                ApusAI_Tasks[complete_reference].error_code = msg.Tags["Code"]
-                ApusAI_Tasks[complete_reference].endtime = os.time()
-                DebugPrint("DEBUG: Task marked as 'failed': " .. complete_reference)
+            if ApusAI_Tasks[reference_to_use] then
+                ApusAI_Tasks[reference_to_use].status = "failed"
+                ApusAI_Tasks[reference_to_use].error_message = error_message
+                ApusAI_Tasks[reference_to_use].error_code = msg.Tags["Code"]
+                ApusAI_Tasks[reference_to_use].endtime = os.time()
+                DebugPrint("DEBUG: Task marked as 'failed': " .. reference_to_use)
             end
             
             -- Call callback with error
-            if complete_reference and self._callbacks[complete_reference] then
-                local callback = self._callbacks[complete_reference]
-                self._callbacks[complete_reference] = nil
+            if reference_to_use and self._callbacks[reference_to_use] then
+                local callback = self._callbacks[reference_to_use]
+                self._callbacks[reference_to_use] = nil
                 callback({
                     code = msg.Tags["Code"],
                     message = error_message
                 }, nil)
             else
-                DebugPrint("DEBUG: No callback found for reference: " .. complete_reference)
+                DebugPrint("DEBUG: No callback found for reference: " .. reference_to_use)
                 DebugPrint("DEBUG: Error response from SDK: " .. error_message)
             end
             return
