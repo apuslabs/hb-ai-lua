@@ -1,10 +1,8 @@
 -- ApusAI SDK Test Functions
 -- Demonstrates how to use the ApusAI module for AI inference
 
--- Load the ApusAI module (assuming json is available)
-local json = require('json')
-local ApusAI = require('apus-ai-test')(json)
-
+local ApusAI = require('apus-ai-test')
+ApusAI_Debug = true
 -- Test 1: Simple inference (matches README exactly)
 function Test1_simple_inference()
     print("=== Test 1: Simple Inference ===")
