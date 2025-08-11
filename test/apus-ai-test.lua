@@ -19,7 +19,7 @@ local function DebugPrint(text)
     end
 end
     
-self.ROUTER_PROCESS = "9I9F1IHS94oUABzKclMW8f2oj7_6_X9zGA_fnMZ_AzY"
+self.ROUTER_PROCESS = "D0na6AspYVzZnZNa7lQHnBt_J92EldK_oFtEPLjIexo"
 
 self._handlers_initialized = false
 self._callbacks = {}
@@ -87,10 +87,9 @@ function self.initialize()
         
         -- Generate unique reference
         local reference = options.reference or self.generateReference()
-        local complete_reference = ao.id .. "-" .. reference
         
         -- Create task entry for tracking
-        ApusAI_Tasks[complete_reference] = {
+        ApusAI_Tasks[reference] = {
             data = "",
             session = options.session or "",
             attestation = "",
@@ -100,11 +99,11 @@ function self.initialize()
             starttime = os.time(),
             endtime = nil
         }
-        DebugPrint("DEBUG: Task created with status 'processing': " .. complete_reference)
+        DebugPrint("DEBUG: Task created with status 'processing': " .. reference)
         
         if callback then
-            self._callbacks[complete_reference] = callback
-            DebugPrint("DEBUG: Callback stored for: " .. complete_reference)
+            self._callbacks[reference] = callback
+            DebugPrint("DEBUG: Callback stored for: " .. reference)
         else
             DebugPrint("DEBUG: No callback provided")
         end
@@ -138,8 +137,8 @@ function self.initialize()
             Tags = tags
         })
         
-        DebugPrint("DEBUG : AI inference request sent - Reference: " .. complete_reference)
-        return complete_reference
+        DebugPrint("DEBUG : AI inference request sent - Reference: " .. reference)
+        return reference
     end
     
 
@@ -216,41 +215,33 @@ function self.initialize()
     
     function self._handleInferenceResponse(msg)
         local session = msg.Tags["X-Session"] or ""
-        local reference = msg.Tags["X-Reference"] or ""
+        local reference = msg.Tags["X-Reference"] or msg.reference
         DebugPrint("DEBUG: Response received with reference: " .. reference)
         
         -- Check if this is an error response
         if msg.Tags["Code"] then
             local error_message = msg.Tags["Message"] or "Unknown error"
             DebugPrint("DEBUG: Error response received - Code: " .. msg.Tags["Code"] .. ", Message: " .. error_message)
-            
-            -- Only when the error code is "Error" we will use complete_reference, otherwise use reference
-            local reference_to_use
-            if msg.Tags["Code"] == "Error" then
-                reference_to_use = ao.id .. "-" .. reference
-            else
-                reference_to_use = reference
-            end
-            
+
             -- Update task status to failed
-            if ApusAI_Tasks[reference_to_use] then
-                ApusAI_Tasks[reference_to_use].status = "failed"
-                ApusAI_Tasks[reference_to_use].error_message = error_message
-                ApusAI_Tasks[reference_to_use].error_code = msg.Tags["Code"]
-                ApusAI_Tasks[reference_to_use].endtime = os.time()
-                DebugPrint("DEBUG: Task marked as 'failed': " .. reference_to_use)
+            if ApusAI_Tasks[reference] then
+                ApusAI_Tasks[reference].status = "failed"
+                ApusAI_Tasks[reference].error_message = error_message
+                ApusAI_Tasks[reference].error_code = msg.Tags["Code"]
+                ApusAI_Tasks[reference].endtime = os.time()
+                DebugPrint("DEBUG: Task marked as 'failed': " .. reference)
             end
             
             -- Call callback with error
-            if reference_to_use and self._callbacks[reference_to_use] then
-                local callback = self._callbacks[reference_to_use]
-                self._callbacks[reference_to_use] = nil
+            if reference and self._callbacks[reference] then
+                local callback = self._callbacks[reference]
+                self._callbacks[reference] = nil
                 callback({
                     code = msg.Tags["Code"],
                     message = error_message
                 }, nil)
             else
-                DebugPrint("DEBUG: No callback found for reference: " .. reference_to_use)
+                DebugPrint("DEBUG: No callback found for reference: " .. reference)
                 DebugPrint("DEBUG: Error response from SDK: " .. error_message)
             end
             return
@@ -268,14 +259,7 @@ function self.initialize()
         end
         
         -- Extract attestation (it's a complex nested structure)
-        local attestation = ""
-        if decoded_data.attestation and type(decoded_data.attestation) == "table" then
-            -- The attestation is nested, try to extract the JWT token
-            if decoded_data.attestation[1] and decoded_data.attestation[1][2] then
-                attestation = decoded_data.attestation[1][2]
-            end
-        end
-        
+        local attestation = json.encode(decoded_data.attestation)
         local response = {
             data = decoded_data.result or msg.Data or "",  -- Note: "result" not "results"
             session = session,

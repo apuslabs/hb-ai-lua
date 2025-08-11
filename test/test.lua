@@ -30,6 +30,7 @@ function Test2_advanced_inference()
         print("Session ID for follow-up: " .. res.session)
         print("Translation received: " .. res.data)
     end)
+    print("Task Reference: " .. taskRef)
 end
 
 -- Test 3: Just prompt with callback
@@ -55,9 +56,9 @@ function Test4_get_balance()
         end
         
         print("✅ Balance retrieved successfully:")
-        print("  Account: " .. balance.account)
-        print("  Balance: " .. balance.balance .. " Credits")
-        print("  Data: " .. balance.data)
+        print("✅ Account: " .. balance.account)
+        print("✅ Balance: " .. balance.balance .. " Credits")
+        print("✅ Data: " .. balance.data)
     end)
 end
 
@@ -91,7 +92,7 @@ function Test7_session_handling()
     
     -- Simple state for 2-question conversation
     local state = {
-        session = nil,
+        session = "Test-session1",
         currentQuestion = 1
     }
     
