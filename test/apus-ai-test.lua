@@ -18,6 +18,55 @@ local function DebugPrint(text)
         print("\27[34m" .. text .. "\27[0m")
     end
 end
+-- Box formatting helpers
+local BOX_W = 58
+local function box_top()
+    print("╔" .. string.rep("═", BOX_W) .. "╗")
+end
+local function box_sep()
+    print("╠" .. string.rep("═", BOX_W) .. "╣")
+end
+local function box_bottom()
+    print("╚" .. string.rep("═", BOX_W) .. "╝")
+end
+-- Width-aware helpers to keep right edge straight with emojis/UTF-8
+local function char_width(cp)
+    if cp <= 127 then return 1 end
+    -- Assume non-ASCII are wide; good enough for emojis and CJK
+    return 2
+end
+local function display_width(s)
+    local w = 0
+    for _, cp in utf8.codes(s) do
+        w = w + char_width(cp)
+    end
+    return w
+end
+local function truncate_to_width(s, maxw)
+    local out = {}
+    local w = 0
+    for _, cp in utf8.codes(s) do
+        local cw = char_width(cp)
+        if w + cw > maxw then break end
+        table.insert(out, utf8.char(cp))
+        w = w + cw
+    end
+    return table.concat(out), w
+end
+local function line_left(text)
+    local s = tostring(text or "")
+    local w = display_width(s)
+    if w > BOX_W then s, w = truncate_to_width(s, BOX_W) end
+    print("║" .. s .. string.rep(" ", BOX_W - w) .. "║")
+end
+local function line_center(text)
+    local s = tostring(text or "")
+    local w = display_width(s)
+    if w > BOX_W then s, w = truncate_to_width(s, BOX_W) end
+    local left = math.floor((BOX_W - w) / 2)
+    local right = BOX_W - w - left
+    print("║" .. string.rep(" ", left) .. s .. string.rep(" ", right) .. "║")
+end
     
 self.ROUTER_PROCESS = "D0na6AspYVzZnZNa7lQHnBt_J92EldK_oFtEPLjIexo"
 
@@ -27,27 +76,27 @@ self._callbacks = {}
 function self.initialize()
         if self._handlers_initialized then return end
         
-        print("╔" .. string.rep("═", 58) .. "╗")
-        print("║" .. string.rep(" ", 18) .. "🚀 APUS AI SDK 🚀" .. string.rep(" ", 18) .. "║")
-        print("║" .. string.rep(" ", 16) .. "Welcome to the Future!" .. string.rep(" ", 16) .. "║")
-        print("╠" .. string.rep("═", 58) .. "╣")
-        print("║  ✅ ApusAI SDK Initialized successfully!             ║")
-        print("║                                                      ║")
-        print("║  🎁 NEW USER BONUS: 5 FREE inference credits!       ║")
-        print("║                                                      ║")
-        print("║  🔧 How to create an instance:                       ║")
-        print("║      ApusAI = require('apus-ai-test')                ║")
-        print("║                                                      ║")
-        print("║  📋 Available Methods:                               ║")
-        print("║    🧠 ApusAI.infer() - AI inference & chat          ║")
-        print("║    💰 ApusAI.getBalance() - Check your credits      ║")
-        print("║    📊 ApusAI.getTaskStatus() - Monitor tasks        ║")
-        print("║                                                      ║")
-        print("║  💡 Pro Tip: Enable debug logs with:                ║")
-        print("║      ApusAI_Debug = true                             ║")
-        print("║                                                      ║")
-        print("║  🎯 Ready to build amazing AI applications!         ║")
-        print("╚" .. string.rep("═", 58) .. "╝")
+        box_top()
+        line_center("🚀 APUS AI SDK 🚀")
+        line_center("Welcome to the Future!")
+        box_sep()
+        line_left("  ✅ ApusAI SDK Initialized successfully!")
+        line_left("")
+        line_left("  🎁 NEW USER BONUS: 5 FREE inference credits!")
+        line_left("")
+        line_left("  🔧 How to create an instance:")
+        line_left("      ApusAI = require('apus-ai-test')")
+        line_left("")
+        line_left("  📋 Available Methods:")
+        line_left("    🧠 ApusAI.infer() - AI inference & chat")
+        line_left("    💰 ApusAI.getBalance() - Check your credits")
+        line_left("    📊 ApusAI.getTaskStatus() - Monitor tasks")
+        line_left("")
+        line_left("  💡 Pro Tip: Enable debug logs with:")
+        line_left("      ApusAI_Debug = true")
+        line_left("")
+        line_left("  🎯 Ready to build amazing AI applications!")
+        box_bottom()
         
         Handlers.add(
             "apus-ai-inference-response",

@@ -18,8 +18,57 @@ local function DebugPrint(text)
         print("\27[34m" .. text .. "\27[0m")
     end
 end
+-- Box formatting helpers
+local BOX_W = 58
+local function box_top()
+    print("╔" .. string.rep("═", BOX_W) .. "╗")
+end
+local function box_sep()
+    print("╠" .. string.rep("═", BOX_W) .. "╣")
+end
+local function box_bottom()
+    print("╚" .. string.rep("═", BOX_W) .. "╝")
+end
+-- Width-aware helpers to keep right edge straight with emojis/UTF-8
+local function char_width(cp)
+    if cp <= 127 then return 1 end
+    -- Assume non-ASCII are wide; good enough for emojis and CJK
+    return 2
+end
+local function display_width(s)
+    local w = 0
+    for _, cp in utf8.codes(s) do
+        w = w + char_width(cp)
+    end
+    return w
+end
+local function truncate_to_width(s, maxw)
+    local out = {}
+    local w = 0
+    for _, cp in utf8.codes(s) do
+        local cw = char_width(cp)
+        if w + cw > maxw then break end
+        table.insert(out, utf8.char(cp))
+        w = w + cw
+    end
+    return table.concat(out), w
+end
+local function line_left(text)
+    local s = tostring(text or "")
+    local w = display_width(s)
+    if w > BOX_W then s, w = truncate_to_width(s, BOX_W) end
+    print("║" .. s .. string.rep(" ", BOX_W - w) .. "║")
+end
+local function line_center(text)
+    local s = tostring(text or "")
+    local w = display_width(s)
+    if w > BOX_W then s, w = truncate_to_width(s, BOX_W) end
+    local left = math.floor((BOX_W - w) / 2)
+    local right = BOX_W - w - left
+    print("║" .. string.rep(" ", left) .. s .. string.rep(" ", right) .. "║")
+end
     
-self.ROUTER_PROCESS = "9I9F1IHS94oUABzKclMW8f2oj7_6_X9zGA_fnMZ_AzY"
+self.ROUTER_PROCESS = "D0na6AspYVzZnZNa7lQHnBt_J92EldK_oFtEPLjIexo"
 
 self._handlers_initialized = false
 self._callbacks = {}
@@ -27,27 +76,27 @@ self._callbacks = {}
 function self.initialize()
         if self._handlers_initialized then return end
         
-        print("╔" .. string.rep("═", 58) .. "╗")
-        print("║" .. string.rep(" ", 18) .. "🚀 APUS AI SDK 🚀" .. string.rep(" ", 18) .. "║")
-        print("║" .. string.rep(" ", 16) .. "Welcome to the Future!" .. string.rep(" ", 16) .. "║")
-        print("╠" .. string.rep("═", 58) .. "╣")
-        print("║  ✅ ApusAI SDK Initialized successfully!             ║")
-        print("║                                                      ║")
-        print("║  🎁 NEW USER BONUS: 5 FREE inference credits!       ║")
-        print("║                                                      ║")
-        print("║  🔧 How to create an instance:                       ║")
-        print("║      ApusAI = require('apus-ai-test')                ║")
-        print("║                                                      ║")
-        print("║  📋 Available Methods:                               ║")
-        print("║    🧠 ApusAI.infer() - AI inference & chat          ║")
-        print("║    💰 ApusAI.getBalance() - Check your credits      ║")
-        print("║    📊 ApusAI.getTaskStatus() - Monitor tasks        ║")
-        print("║                                                      ║")
-        print("║  💡 Pro Tip: Enable debug logs with:                ║")
-        print("║      ApusAI_Debug = true                             ║")
-        print("║                                                      ║")
-        print("║  🎯 Ready to build amazing AI applications!         ║")
-        print("╚" .. string.rep("═", 58) .. "╝")
+        box_top()
+        line_center("🚀 APUS AI SDK 🚀")
+        line_center("Welcome to the Future!")
+        box_sep()
+        line_left("  ✅ ApusAI SDK Initialized successfully!")
+        line_left("")
+        line_left("  🎁 NEW USER BONUS: 5 FREE inference credits!")
+        line_left("")
+        line_left("  🔧 How to create an instance:")
+        line_left("      ApusAI = require('apus-ai-test')")
+        line_left("")
+        line_left("  📋 Available Methods:")
+        line_left("    🧠 ApusAI.infer() - AI inference & chat")
+        line_left("    💰 ApusAI.getBalance() - Check your credits")
+        line_left("    📊 ApusAI.getTaskStatus() - Monitor tasks")
+        line_left("")
+        line_left("  💡 Pro Tip: Enable debug logs with:")
+        line_left("      ApusAI_Debug = true")
+        line_left("")
+        line_left("  🎯 Ready to build amazing AI applications!")
+        box_bottom()
         
         Handlers.add(
             "apus-ai-inference-response",
@@ -87,10 +136,9 @@ function self.initialize()
         
         -- Generate unique reference
         local reference = options.reference or self.generateReference()
-        local complete_reference = ao.id .. "-" .. reference
         
         -- Create task entry for tracking
-        ApusAI_Tasks[complete_reference] = {
+        ApusAI_Tasks[reference] = {
             data = "",
             session = options.session or "",
             attestation = "",
@@ -100,11 +148,11 @@ function self.initialize()
             starttime = os.time(),
             endtime = nil
         }
-        DebugPrint("DEBUG: Task created with status 'processing': " .. complete_reference)
+        DebugPrint("DEBUG: Task created with status 'processing': " .. reference)
         
         if callback then
-            self._callbacks[complete_reference] = callback
-            DebugPrint("DEBUG: Callback stored for: " .. complete_reference)
+            self._callbacks[reference] = callback
+            DebugPrint("DEBUG: Callback stored for: " .. reference)
         else
             DebugPrint("DEBUG: No callback provided")
         end
@@ -138,8 +186,8 @@ function self.initialize()
             Tags = tags
         })
         
-        DebugPrint("DEBUG : AI inference request sent - Reference: " .. complete_reference)
-        return complete_reference
+        DebugPrint("DEBUG : AI inference request sent - Reference: " .. reference)
+        return reference
     end
     
 
@@ -216,41 +264,33 @@ function self.initialize()
     
     function self._handleInferenceResponse(msg)
         local session = msg.Tags["X-Session"] or ""
-        local reference = msg.Tags["X-Reference"] or ""
+        local reference = msg.Tags["X-Reference"] or msg.reference
         DebugPrint("DEBUG: Response received with reference: " .. reference)
         
         -- Check if this is an error response
         if msg.Tags["Code"] then
             local error_message = msg.Tags["Message"] or "Unknown error"
             DebugPrint("DEBUG: Error response received - Code: " .. msg.Tags["Code"] .. ", Message: " .. error_message)
-            
-            -- Only when the error code is "Error" we will use complete_reference, otherwise use reference
-            local reference_to_use
-            if msg.Tags["Code"] == "Error" then
-                reference_to_use = ao.id .. "-" .. reference
-            else
-                reference_to_use = reference
-            end
-            
+
             -- Update task status to failed
-            if ApusAI_Tasks[reference_to_use] then
-                ApusAI_Tasks[reference_to_use].status = "failed"
-                ApusAI_Tasks[reference_to_use].error_message = error_message
-                ApusAI_Tasks[reference_to_use].error_code = msg.Tags["Code"]
-                ApusAI_Tasks[reference_to_use].endtime = os.time()
-                DebugPrint("DEBUG: Task marked as 'failed': " .. reference_to_use)
+            if ApusAI_Tasks[reference] then
+                ApusAI_Tasks[reference].status = "failed"
+                ApusAI_Tasks[reference].error_message = error_message
+                ApusAI_Tasks[reference].error_code = msg.Tags["Code"]
+                ApusAI_Tasks[reference].endtime = os.time()
+                DebugPrint("DEBUG: Task marked as 'failed': " .. reference)
             end
             
             -- Call callback with error
-            if reference_to_use and self._callbacks[reference_to_use] then
-                local callback = self._callbacks[reference_to_use]
-                self._callbacks[reference_to_use] = nil
+            if reference and self._callbacks[reference] then
+                local callback = self._callbacks[reference]
+                self._callbacks[reference] = nil
                 callback({
                     code = msg.Tags["Code"],
                     message = error_message
                 }, nil)
             else
-                DebugPrint("DEBUG: No callback found for reference: " .. reference_to_use)
+                DebugPrint("DEBUG: No callback found for reference: " .. reference)
                 DebugPrint("DEBUG: Error response from SDK: " .. error_message)
             end
             return
@@ -268,14 +308,7 @@ function self.initialize()
         end
         
         -- Extract attestation (it's a complex nested structure)
-        local attestation = ""
-        if decoded_data.attestation and type(decoded_data.attestation) == "table" then
-            -- The attestation is nested, try to extract the JWT token
-            if decoded_data.attestation[1] and decoded_data.attestation[1][2] then
-                attestation = decoded_data.attestation[1][2]
-            end
-        end
-        
+        local attestation = json.encode(decoded_data.attestation)
         local response = {
             data = decoded_data.result or msg.Data or "",  -- Note: "result" not "results"
             session = session,
