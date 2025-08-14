@@ -68,7 +68,7 @@ local function line_center(text)
     print("║" .. string.rep(" ", left) .. s .. string.rep(" ", right) .. "║")
 end
     
-self.ROUTER_PROCESS = "D0na6AspYVzZnZNa7lQHnBt_J92EldK_oFtEPLjIexo"
+self.ROUTER_PROCESS = "ZIc9924GI_wMzPayOZAgVjaxasNq1rIQwdSZseGoh7M"
 
 self._handlers_initialized = false
 self._callbacks = {}
