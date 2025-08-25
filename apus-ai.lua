@@ -68,7 +68,7 @@ local function line_center(text)
     print("║" .. string.rep(" ", left) .. s .. string.rep(" ", right) .. "║")
 end
     
-self.ROUTER_PROCESS = "ZIc9924GI_wMzPayOZAgVjaxasNq1rIQwdSZseGoh7M"
+self.ROUTER_PROCESS = "Bf6JJR2tl2Wr38O2-H6VctqtduxHgKF-NzRB9HhTRzo"
 
 self._handlers_initialized = false
 self._callbacks = {}
@@ -85,7 +85,7 @@ function self.initialize()
         line_left("  🎁 NEW USER BONUS: 5 FREE inference credits!")
         line_left("")
         line_left("  🔧 How to create an instance:")
-        line_left("      ApusAI = require('apus-ai-test')")
+        line_left("      ApusAI = require('@apus/ai')")
         line_left("")
         line_left("  📋 Available Methods:")
         line_left("    🧠 ApusAI.infer() - AI inference & chat")
@@ -133,6 +133,15 @@ function self.initialize()
         
         -- Handle optional parameters
         options = options or {}
+        if type(options) == "string" then
+            local ok, decoded = pcall(json.decode, options)
+            if ok and type(decoded) == "table" then
+                options = decoded
+            else
+                DebugPrint("DEBUG: Failed to decode options string; using empty table")
+                options = {}
+            end
+        end
         
         -- Generate unique reference
         local reference = options.reference or self.generateReference()
