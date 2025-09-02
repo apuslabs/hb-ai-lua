@@ -68,7 +68,7 @@ local function line_center(text)
     print("║" .. string.rep(" ", left) .. s .. string.rep(" ", right) .. "║")
 end
     
-self.ROUTER_PROCESS = "Bf6JJR2tl2Wr38O2-H6VctqtduxHgKF-NzRB9HhTRzo"
+self.ROUTER_PROCESS = "TED2PpCVx0KbkQtzEYBo0TRAO-HPJlpCMmUzch9ZL2g"
 
 self._handlers_initialized = false
 self._callbacks = {}
@@ -168,7 +168,6 @@ function self.initialize()
 
         local tags = {
             ["Action"] = "Infer",
-            ["X-Prompt"] = prompt,
             ["X-Reference"] = reference,
         }
         
@@ -192,7 +191,8 @@ function self.initialize()
         DebugPrint("DEBUG: Tags: " .. json.encode(tags))
         ao.send({
             Target = self.ROUTER_PROCESS,
-            Tags = tags
+            Tags = tags,
+            Data = prompt
         })
         
         DebugPrint("DEBUG : AI inference request sent - Reference: " .. reference)

@@ -17,7 +17,7 @@ function Test2_advanced_inference()
     print("=== Test 2: Advanced Inference ===")
     print("Prompt: 'Translate the following to French: 'The future is decentralized.'")
     local prompt = "Translate the following to French: 'The future is decentralized.'"
-    local options = [[{"reference":"17561088000001","max_tokens":512}]]
+    local options = [[{"max_tokens":512}]]
     print("Options: " .. options)
     local taskRef = ApusAI.infer(prompt, options, function(err, res)
         if err then
